@@ -1,5 +1,4 @@
 use crate::parser;
-use parser::Commands::*;
 
 pub struct Window {
     width: isize,
@@ -23,14 +22,9 @@ impl Point {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum shape_type {
+pub enum Shape {
     Square(isize, isize),
     Circle(isize),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Shape {
-    pub shape_type: shape_type,
 }
 
 impl Window {
@@ -91,8 +85,8 @@ impl Window {
     }
 
     pub fn draw(&mut self, point: Point, shape: Shape, chr:char) {
-        match shape.shape_type {
-            shape_type::Circle(radius) => {
+        match shape {
+            Shape::Circle(radius) => {
                 let x = point.x;
                 let y = point.y;
                 let x1 = if x < radius { 0 } else { x - radius};
@@ -109,7 +103,7 @@ impl Window {
                     }
                 }
             },
-            shape_type::Square(length, height) => {
+            Shape::Square(length, height) => {
                 let x = point.x;
                 let y = point.y;
                 let x1 = if x < length { 0 } else { x - length };
@@ -123,7 +117,6 @@ impl Window {
                 }
 
             },
-            _ => {}
 
         }
 

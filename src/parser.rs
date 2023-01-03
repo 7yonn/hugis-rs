@@ -7,15 +7,18 @@ use crate::parser::Commands::*;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Commands {
-    Draw,
     Clear,
-    New(isize, isize),
-    Resize(isize, isize),
-    Print,
+    Draw(usize, Point, char),
     Fill(char),
-    Replace(char, char),
     Help,
+    List,
+    NewWin(isize, isize),
+    NewShape(Shape),
+    Print,
     Quit,
+    ToDo,
+    Replace(char, char),
+    Resize(isize, isize),
 }
 
 type Result<T> = std::result::Result<T, ParseError>;
@@ -27,6 +30,7 @@ pub enum ParseError {
     MissingArguments(String),
     NotNumber(String),
     NoNonPositiveIntegers(String),
+    InvalidShapeType(String),
 }
 
 
@@ -43,10 +47,13 @@ impl fmt::Display for ParseError {
                 write!(f, "\"{input}\", too many arguments!")
             },
             ParseError::NotNumber(input) => {
-                write!(f, "\"{input}\", not a number!")
+                write!(f, "\"{input}\", not a valid number!")
             },
             ParseError::NoNonPositiveIntegers(input) => {
                 write!(f, "\"{input}\", can't have numbers below 1!")
+            }
+            ParseError::InvalidShapeType(input) => {
+                write!(f, "\"{input}\" is not a valid shape type")
             }
         }
     }
@@ -70,6 +77,7 @@ pub fn parse_to_command(input: String) -> Result<Commands>{
                 "quit" => Ok(Quit),
                 "help" => Ok(Help),
                 "clear" => Ok(Clear),
+                "list" => Ok(List),
                 _ => Err(ParseError::InvalidCommandError(input))
             }
         }
@@ -78,7 +86,7 @@ pub fn parse_to_command(input: String) -> Result<Commands>{
                 "fill" => {
                     let chars: Vec<char> = args.chars().collect();
                     if chars.len() > 1 {
-                        return Err(ParseError::TooManyArguments(args.to_owned()));
+                        return Err(ParseError::TooManyArguments(args.to_string()));
                     }
                     Ok(Fill(chars[0]))
                 },
@@ -95,39 +103,115 @@ pub fn parse_to_command(input: String) -> Result<Commands>{
                 },
                 "new" => {
                     let arg_vec: Vec<_> = args.split(' ').collect();
-                    if arg_vec.len() > 2 {
-                        return Err(ParseError::TooManyArguments(input));
+                    match arg_vec[0] {
+                        "window" => {
+                            if arg_vec.len() > 3 {
+                                return Err(ParseError::TooManyArguments(input));
+                            }
+                            if arg_vec.len() < 3 {
+                                return Err(ParseError::MissingArguments(input));
+                            }
+                            let arg1 = arg_vec[1].parse::<isize>();
+                            let arg2 = arg_vec[2].parse::<isize>();
+                            let arg1= if let Ok(arg1) = arg1 { arg1 } else {
+                                return Err(ParseError::NotNumber(args.to_string()));
+                            };
+                            let arg2= if let Ok(arg2) = arg2 { arg2 } else {
+                                return Err(ParseError::NotNumber(args.to_string()));
+                            };
+                            if arg1 <= 0 || arg2 <= 0 {
+                                return Err(ParseError::NoNonPositiveIntegers(args.to_string()));
+                            }
+                            return Ok(NewWin(arg1, arg2))
+                        },
+                        "shape" => {
+                            let shape_type = arg_vec[1];
+                            match shape_type {
+                                "circle" => {
+                                    if arg_vec.len() > 3 {
+                                        return Err(ParseError::TooManyArguments(input));
+                                    }
+                                    if arg_vec.len() < 3 {
+                                        return Err(ParseError::MissingArguments(input));
+                                    }
+                                    if let Ok(radius) = arg_vec[2].parse::<isize>() {
+                                        return Ok(NewShape(Shape::Circle(radius)));
+                                    } else {
+                                        return Err(ParseError::NotNumber(arg_vec[2].to_string()));
+                                    }
+                                },
+                                "square" => {
+                                    if arg_vec.len() > 4 {
+                                        return Err(ParseError::TooManyArguments(input));
+                                    }
+                                    if arg_vec.len() < 4 {
+                                        return Err(ParseError::MissingArguments(input));
+                                    }
+                                    if let Ok(length) = arg_vec[2].parse::<isize>() {
+                                        if let Ok(height) = arg_vec[3].parse::<isize>() {
+                                            return Ok(NewShape(Shape::Square(length,height)));
+                                        } else {
+                                            return Err(ParseError::NotNumber(arg_vec[3].to_string()));
+                                        }
+                                    } else {
+                                        return Err(ParseError::NotNumber(arg_vec[2].to_string()));
+                                    }
+                                },
+                                _ => {return Err(ParseError::InvalidShapeType(shape_type.to_string()));},
+                            }
+                        },
+                        _ => {
+                            return Err(ParseError::InvalidCommandError(input));
+                        }
                     }
-                    let arg1 = arg_vec[0].parse::<isize>();
-                    let arg2 = arg_vec[1].parse::<isize>();
-                    let arg1= if let Ok(arg1) = arg1 { arg1 } else {
-                        return Err(ParseError::NotNumber(args.to_owned()));
-                    };
-                    let arg2= if let Ok(arg2) = arg2 { arg2 } else {
-                        return Err(ParseError::NotNumber(args.to_owned()));
-                    };
-                    if arg1 <= 0 || arg2 <= 0 {
-                        return Err(ParseError::NoNonPositiveIntegers(args.to_owned()));
-                    }
-                    return Ok(New(arg1, arg2))
                 },
                 "resize" => {
                     let arg_vec: Vec<_> = args.split(' ').collect();
                     if arg_vec.len() > 2 {
                         return Err(ParseError::TooManyArguments(input));
                     }
+                    if arg_vec.len() < 2 {
+                        return Err(ParseError::MissingArguments(input));
+                    }
                     let arg1 = arg_vec[0].parse::<isize>();
                     let arg2 = arg_vec[1].parse::<isize>();
                     let arg1= if let Ok(arg1) = arg1 { arg1 } else {
-                        return Err(ParseError::NotNumber(args.to_owned()));
+                        return Err(ParseError::NotNumber(args.to_string()));
                     };
                     let arg2= if let Ok(arg2) = arg2 { arg2 } else {
-                        return Err(ParseError::NotNumber(args.to_owned()));
+                        return Err(ParseError::NotNumber(args.to_string()));
                     };
                     if arg1 <= 0 || arg2 <= 0 {
-                        return Err(ParseError::NoNonPositiveIntegers(args.to_owned()));
+                        return Err(ParseError::NoNonPositiveIntegers(args.to_string()));
                     }
                     return Ok(Resize(arg1, arg2))
+                },
+                "draw" => {
+                    let arg_vec: Vec<_> = args.split(' ').collect();
+                    if arg_vec.len() > 4 {
+                        return Err(ParseError::TooManyArguments(input));
+                    }
+                    if arg_vec.len() < 4 {
+                        return Err(ParseError::MissingArguments(input));
+                    }
+                    if let Ok(index) = arg_vec[0].parse::<usize>() {
+                        let x = if let Ok(x) = arg_vec[1].parse::<isize>() {
+                            x
+                        } else {
+                            return Err(ParseError::NotNumber(arg_vec[1].to_string()))
+                        };
+                        let y = if let Ok(y) = arg_vec[2].parse::<isize>() {
+                            y
+                        } else {
+                            return Err(ParseError::NotNumber(arg_vec[2].to_string()))
+                        };
+                        if arg_vec[3].len() > 1 {
+                            return Err(ParseError::TooManyArguments(input));
+                        }
+                        return Ok(Draw(index, Point::new(x, y), arg_vec[3].chars().nth(0).unwrap()));
+                    } else {
+                        return Err(ParseError::NotNumber(arg_vec[0].to_string()));
+                    }
                 },
                 _ => Err(ParseError::InvalidCommandError(input))
             }
@@ -145,5 +229,5 @@ pub fn get_input() -> io::Result<String> {
     io::Write::flush(&mut io::stdout()).expect("flush failed!");
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer)?;
-    Ok(buffer.trim().to_owned())
+    Ok(buffer.trim().to_string())
 }

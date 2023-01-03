@@ -3,17 +3,17 @@ mod parser;
 use window::Window;
 use window::*;
 use std::process;
-use parser::{get_input, parse_to_command};
 use parser::Commands;
 
 fn main() {
     let mut win = Window::new(10, 10);
+    let mut shapes: Vec<Shape> = vec![];
     loop {
-        command(&mut win);
+        command(&mut win, &mut shapes);
     }
 }
 
-pub fn command(window: &mut Window) {
+pub fn command(window: &mut Window, shapes: &mut Vec<Shape>) {
     let command = parser::command_from_input();
     match command {
         Err(e) => {
@@ -25,12 +25,21 @@ pub fn command(window: &mut Window) {
                     println!("Printing window.");
                     window.print();
                 },
+                Commands::List => {
+                    if shapes.len() == 0 {
+                        println!("There are currently no shapes");
+                    } else {
+                        println!("Shapes: ");
+                        for (i, shape) in shapes.iter().enumerate() {
+                            println!("{i}. {:?}", shape);
+                        }
+                    }
+                },
                 Commands::Quit => {
                     println!("See you again next time!");
                     process::exit(0x0100);
                 },
                 Commands::Clear => {
-                    println!("clearing terminal");
                     clear_terminal();
                 },
                 Commands::Help => {
@@ -53,46 +62,33 @@ quit -> quits"##);
                     window.replace(old_chr, new_chr);
                     println!("'{old_chr}' replaced with '{new_chr}'");
                 },
-                Commands::New(width, height) => {
+                Commands::NewWin(width, height) => {
                     window.comm_new(width, height);
                     println!("Made new window with {width} width and {height} height");
+                },
+                Commands::NewShape(shape) => {
+                    println!("Added new shape to shapes\n{shape:#?}");
+                    shapes.push(shape);
                 },
                 Commands::Resize(width, height) => {
                     window.resize(width, height);
                     println!("Resized window to {width} width and {height} height");
                 },
-                _ => {
+                Commands::Draw(index, point, chr) => {
+                    if index > shapes.len() {
+                        println!("Given index is larger than current shapes list");
+                    } else {
+                        window.draw(point, shapes[index], chr);
+                    }
+                }
+                Commands::ToDo => {
+                    println!("ToDo!");
+                }
                 }
             }
         }
     }
-}
 
-fn test() {
-    use std::{thread, time};
-    let sleep_dur = time::Duration::from_secs(1);
-    let mut window = Window::new(32,22);
-    let big_circle = Shape {
-        shape_type: shape_type::Circle(10),
-    };
-    let small_circle = Shape {
-        shape_type: shape_type::Circle(6),
-    };
-    let tiny_circle = Shape {
-        shape_type: shape_type::Circle(3),
-    };
-    let sqr = Shape {
-        shape_type: shape_type::Square(32,4),
-    };
-    window.fill('.');
-    window.draw(Point::new(15,13), sqr, '=');
-    window.draw(Point::new(12,10), big_circle, '#');
-    window.draw(Point::new(10,8), small_circle, 'a');
-    window.draw(Point::new(8, 6), tiny_circle, 'o');
-    window.print();
-    window.resize(10, 10);
-    window.print();
-}
 fn clear_terminal() {
     print!("\x1B[2J\x1B[1;1H");
 }
