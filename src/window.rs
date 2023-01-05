@@ -90,9 +90,9 @@ impl Window {
                 let x = point.x;
                 let y = point.y;
                 let x1 = if x < radius { 0 } else { x - radius};
-                let x2 = if x + radius > self.width { self.width } else { x + radius };
+                let x2 = if x + radius > self.width - 1 { self.width - 1 } else { x + radius };
                 let y1 = if y < radius { 0 } else { y - radius};
-                let y2 = if y + radius >= self.height - 1 { self.height - 1 } else { y + radius };
+                let y2 = if y + radius > self.height - 1 { self.height - 1 } else { y + radius };
 
                 for cur_y in y1..=y2 {
                     for cur_x in x1..=x2 {
@@ -107,11 +107,11 @@ impl Window {
                 let x = point.x;
                 let y = point.y;
                 let x1 = if x < length { 0 } else { x - length };
-                let x2 = if x + length > self.width { self.width } else { x + length };
+                let x2 = if x + length > self.width - 1 { self.width - 1 } else { x + length };
                 let y1 = if y < height { 0 } else { y - height};
-                let y2 = if y + height > self.height { self.height } else { y + height };
-                for cur_x in x1..x2 {
-                    for cur_y in y1..y2 {
+                let y2 = if y + height > self.height - 1 { self.height - 1 } else { y + height };
+                for cur_x in x1..=x2 {
+                    for cur_y in y1..=y2 {
                         self.pixels[(cur_y * self.width + cur_x) as usize] = chr;
                     }
                 }
